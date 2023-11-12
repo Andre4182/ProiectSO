@@ -151,7 +151,7 @@ int main(int argc,char *argv[]){
 		printf("Usage ./program <director_intrare>");
 		exit(-1);
 	}
-	int output=creat("statistica.txt", S_IWUSR);
+	int output=creat("statistica.txt", S_IWUSR | S_IRUSR);
 	if(output==-1){
 		finishWithError("Eroare la crearea de fisier output:statistica.txt");
 	}
