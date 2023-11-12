@@ -8,7 +8,8 @@
 #include <time.h>
 #include <stdint.h>
 #include <string.h>
-#include <libgen.h>
+#include <dirent.h>
+#include<libgen.h>
 void finishWithError(const char* errorMessage){
 	perror(errorMessage);
 	exit(-1);
@@ -31,16 +32,6 @@ void extractAccessRights(mode_t mode, char *accessRights){
     accessRights[8]=(mode & S_IXOTH) ?'X':'-';
     accessRights[9]='\0';
 }
-int isFileBMP(int fd){
-	char signature[3];
-	read(fd,signature,2);
-	signature[2]='\0';
-	char *expected="BM\0";
-	if(strcmp(signature,expected)==0)
-		return 1;
-	else 
-		return 0;
-}
 
 void getHeightAndWidth(int fd,int *height,int *width){
 	if(lseek(fd,18,SEEK_SET)==-1)
@@ -59,63 +50,115 @@ void getHeightAndWidth(int fd,int *height,int *width){
 		exit(-6);
 	}
 }
-int main(int argc,char *argv[]){
 
-	if(argc!=2){
-		printf("Usage ./program <fisier_intrare>");
-		exit(-1);
-	}
-	
-	int input=open(argv[1],O_RDONLY);
+
+void processFile(char *filePath,int output){
+
+	int input=open(filePath,O_RDONLY);
 	if(input==-1){
 		finishWithError("Eroare la deschiderea fisierului de intrare!");
 	}
 	
-	if(isFileBMP(input)==0)
-	{
-		printf("Fisierul nu este BMP!");
-		exit(-1);
-	}
 	struct stat file_stat;
-	if(fstat(input,&file_stat)== -1){
+	if(lstat(filePath,&file_stat)== -1){
 		finishWithError("Eroare la obtinerea informatiilor despre fisier!");
 	}
-	
+	char *fileName=basename(filePath);
+		
 	char time[20];
 	extractLastModificationTime(&file_stat,time);
 	
-	char accessRights[10];
-	extractAccessRights(file_stat.st_mode,accessRights);
+	char accessRights[10];//mutare pt ca la link sunt drepturile legaturii
+
 	
-	char *fileName=basename(argv[1]);
-	int idOwner=file_stat.st_uid;
-	long file_size=(long)file_stat.st_size;
-	long nrOfLinks=(long)file_stat.st_nlink;
+	char statistica[260];
 	
-	int output=creat("statistica.txt", S_IWUSR);
-	if(output==-1){
-		perror("Eroare la crearea de fisier output:statistica.txt");
-		int inchidere=close(input);
-		if(inchidere==-1){
-			finishWithError("Eroare la inchiderea fisierului de intrare!");
+	if (S_ISLNK(file_stat.st_mode))
+    	{
+		struct stat link_stat;
+		if(fstat(input,&link_stat)== -1)
+		{
+			finishWithError("Eroare la obtinerea informatiilor despre fisierul target!");}
+
+	        extractAccessRights(link_stat.st_mode,accessRights);
+
+        	sprintf(statistica, "\nnume legatura: %s\ndimensiune legatura: %ld\ndimensiune fisier target: %ld\ndrepturi de acces user legatura: %c%c%c\ndrepturi de acces grup legatura: %c%c%c\ndrepturi de acces altii legatura: %c%c%c\n",
+                fileName, file_stat.st_size, link_stat.st_size, accessRights[0], accessRights[1], accessRights[2], accessRights[3], accessRights[4], accessRights[5], accessRights[6], accessRights[7], accessRights[8]);
+    }
+	else if (S_ISREG(file_stat.st_mode))
+	{
+	    	extractAccessRights(file_stat.st_mode,accessRights);
+       		if (strstr(fileName, ".bmp"))
+        	{
+            		int height, width;
+            		getHeightAndWidth(input, &height, &width);
+
+            		sprintf(statistica, "\nnume fisier: %s\ninaltime: %d\nlungime: %d\ndimensiune: %ld\nidentificatorul utilizatorului: %d\ntimpul ultimei modificari: %s\ncontorul de legaturi: %ld\ndrepturi de acces user: %c%c%c\ndrepturi de acces grup: %c%c%c\ndrepturi de acces altii: %c%c%c\n",
+                    fileName, height, width, file_stat.st_size, file_stat.st_uid, time, file_stat.st_nlink, accessRights[0], accessRights[1], accessRights[2], accessRights[3], accessRights[4], accessRights[5], accessRights[6], accessRights[7], accessRights[8]);
+      		}
+        	else
+        	{
+            		sprintf(statistica, "\nnume fisier: %s\ndimensiune: %ld\nidentificatorul utilizatorului: %d\ntimpul ultimei modificari: %s\ncontorul de legaturi: %ld\ndrepturi de acces user: %c%c%c\ndrepturi de acces grup: %c%c%c\ndrepturi de acces altii: %c%c%c\n",
+                    fileName, file_stat.st_size, file_stat.st_uid, time, file_stat.st_nlink, accessRights[0], accessRights[1], accessRights[2], accessRights[3], accessRights[4], accessRights[5], accessRights[6], accessRights[7], accessRights[8]);
+        	}
+    	}
+    	else if (S_ISDIR(file_stat.st_mode))
+    	{extractAccessRights(file_stat.st_mode,accessRights);
+        	sprintf(statistica,"\nnume director: %s\nidentificatorul utilizatorului: %d\ndrepturi de acces user: %c%c%c\ndrepturi de acces grup: %c%c%c\ndrepturi de acces altii: %c%c%c\n",
+                fileName, file_stat.st_uid, accessRights[0], accessRights[1], accessRights[2], accessRights[3], accessRights[4], accessRights[5], accessRights[6], accessRights[7], accessRights[8]);
+  	}
+
+    ssize_t bytes = write(output, statistica, strlen(statistica));
+    if (bytes == -1)
+    {
+        finishWithError("Error writing to output file");
+    }
+
+    close(input);
+}
+
+void goThroughDirectory(char *dirPath, int output){
+
+	DIR *dir=opendir(dirPath);
+	if(dir==NULL){
+		finishWithError("Eroare la deschiderea directorului!");
+	}
+	processFile(dirPath,output);
+	struct dirent *currentEntry;
+	
+	while((currentEntry=readdir(dir))!=NULL)//cat timp intrarile nu sunt epuizate
+	{
+		if(strcmp(currentEntry->d_name,".")!=0 && strcmp(currentEntry->d_name,"..")!=0)//nu aplica logica pentru legaturile default la directorul curent si directorul parinte
+		{
+			char filePath[PATH_MAX];
+			snprintf(filePath,PATH_MAX,"%s/%s",dirPath,currentEntry->d_name);
+			
+			if(currentEntry->d_type==DT_REG || currentEntry->d_type==DT_LNK ){
+				processFile(filePath,output);
+				
+				}
+			if(currentEntry->d_type==DT_DIR){
+
+				goThroughDirectory(filePath,output);
+				}
 		}
+	}
+}
+
+int main(int argc,char *argv[]){
+
+	if(argc!=2){
+		printf("Usage ./program <director_intrare>");
 		exit(-1);
 	}
-	
-	int height=0,width=0;
-	getHeightAndWidth(input,&height,&width);
-	char statistica[260];
-    sprintf(statistica, "nume fisier: %s\ninaltime: %d\nlungime: %d\ndimensiune: %ld\nidentificatorul utilizatorului: %d\ntimpul ultimei modificari: %s\ncontorul de legaturi: %ld\ndrepturi de acces user: %c%c%c\ndrepturi de acces grup: %c%c%c\ndrepturi de acces altii: %c%c%c",
-            fileName,height,width,file_size,idOwner,time,nrOfLinks,
-            accessRights[0],accessRights[1],accessRights[2],
-            accessRights[3],accessRights[4],accessRights[5],
-            accessRights[6],accessRights[7],accessRights[8]);
+	int output=creat("statistica.txt", S_IWUSR);
+	if(output==-1){
+		finishWithError("Eroare la crearea de fisier output:statistica.txt");
+	}
 
-	ssize_t bytes= write(output,statistica,strlen(statistica));
-    if (bytes== -1) {
-        finishWithError("Eroare la scriere in fisierul de iesire!");
-    }
-	int close_output=close(input);
+	goThroughDirectory(argv[1],output);
+	
+	int close_output=close(output);
 	if(close_output==-1){
 		perror("Eroare la inchidere!");
 		exit(-3);
