@@ -2,6 +2,7 @@
 #include<stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include<aio.h>
@@ -52,7 +53,7 @@ void getHeightAndWidth(int fd,int *height,int *width){
 }
 
 
-void processFile(char *filePath,int output){
+void processFile(char *filePath,char* dirIesire){
 
 	int input=open(filePath,O_RDONLY);
 	if(input==-1){
@@ -107,7 +108,15 @@ void processFile(char *filePath,int output){
         	sprintf(statistica,"\nnume director: %s\nidentificatorul utilizatorului: %d\ndrepturi de acces user: %c%c%c\ndrepturi de acces grup: %c%c%c\ndrepturi de acces altii: %c%c%c\n",
                 fileName, file_stat.st_uid, accessRights[0], accessRights[1], accessRights[2], accessRights[3], accessRights[4], accessRights[5], accessRights[6], accessRights[7], accessRights[8]);
   	}
-
+char outputPath[200];
+  	//strcat(dirPath,"/");
+  	//strcat(dirPath,fileName);
+  	//strcat(dirPath,"_statistica.txt");
+  	snprintf(outputPath,PATH_MAX,"%s/%s_statistica.txt",dirIesire,fileName);
+	int output=creat(outputPath, S_IWUSR | S_IRUSR);
+	if(output==-1){
+		finishWithError("Eroare la crearea de fisier output:statistica.txt");
+	}
     ssize_t bytes = write(output, statistica, strlen(statistica));
     if (bytes == -1)
     {
@@ -115,53 +124,87 @@ void processFile(char *filePath,int output){
     }
 
     close(input);
+    	int close_output=close(output);
+	if(close_output==-1){
+		perror("Eroare la inchidere!");
+		exit(-3);
+	}
 }
 
-void goThroughDirectory(char *dirPath, int output){
+
+void goThroughDirectory(char *dirPath,char *dirIesire){
 
 	DIR *dir=opendir(dirPath);
 	if(dir==NULL){
 		finishWithError("Eroare la deschiderea directorului!");
 	}
-	processFile(dirPath,output);
+	//processFile(dirPath,dirIesire);
 	struct dirent *currentEntry;
 	
 	while((currentEntry=readdir(dir))!=NULL)//cat timp intrarile nu sunt epuizate
-	{
+	{	
+		char filePath[PATH_MAX];
+		snprintf(filePath,PATH_MAX,"%s/%s",dirPath,currentEntry->d_name);
+		
 		if(strcmp(currentEntry->d_name,".")!=0 && strcmp(currentEntry->d_name,"..")!=0)//nu aplica logica pentru legaturile default la directorul curent si directorul parinte
 		{
-			char filePath[PATH_MAX];
-			snprintf(filePath,PATH_MAX,"%s/%s",dirPath,currentEntry->d_name);
+			pid_t pid = fork();
+            		if (pid < 0) {
+                		finishWithError("Error while forking!");
+            		} 
+            		else if (pid == 0) 
+            		{
+
+
 			
-			if(currentEntry->d_type==DT_REG || currentEntry->d_type==DT_LNK ){
-				processFile(filePath,output);
+				if(currentEntry->d_type==DT_REG || currentEntry->d_type==DT_LNK|| currentEntry->d_type==DT_DIR){
+					processFile(filePath,dirIesire);
 				
 				}
-			if(currentEntry->d_type==DT_DIR){
 
-				goThroughDirectory(filePath,output);
-				}
+				 exit(0);
+			}
+			
+			else
+			{
+				int status;
+    				pid_t wpid;
+				while ((wpid = wait(&status)) > 0) {
+        				if (WIFEXITED(status)) {
+           					 printf("S-a încheiat procesul cu pid-ul %d și codul %d\n la parent %d\n", wpid, WEXITSTATUS(status),getpid());
+        				} else {
+            					printf("Procesul cu pid-ul %d a fost încheiat în mod neașteptat\n", wpid);
+      					 }
+    				}
+			
+			}
+			if(currentEntry->d_type==DT_DIR){
+					goThroughDirectory(filePath,dirIesire);
+			}
 		}
 	}
 }
 
 int main(int argc,char *argv[]){
 
-	if(argc!=2){
-		printf("Usage ./program <director_intrare>");
+	if(argc!=3){
+		printf("Usage ./program <director_intrare><director_iesire>");
 		exit(-1);
 	}
-	int output=creat("statistica.txt", S_IWUSR | S_IRUSR);
-	if(output==-1){
-		finishWithError("Eroare la crearea de fisier output:statistica.txt");
-	}
+	//int output=creat("statistica.txt", S_IWUSR | S_IRUSR);
+	//if(output==-1){
+	//	finishWithError("Eroare la crearea de fisier output:statistica.txt");
+	//}
 
-	goThroughDirectory(argv[1],output);
+	goThroughDirectory(argv[1],argv[2]);
 	
-	int close_output=close(output);
-	if(close_output==-1){
-		perror("Eroare la inchidere!");
-		exit(-3);
-	}
+	//int close_output=close(output);
+	//if(close_output==-1){
+	//	perror("Eroare la inchidere!");
+	//	exit(-3);
+	//}
 return 0;
 }
+
+
+
