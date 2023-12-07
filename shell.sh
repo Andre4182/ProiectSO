@@ -3,9 +3,9 @@ if test $# -eq 1
 then
 	while IFS= read -r line
 	do
-		if grep -Eq '^[A-Z][[A-Za-z0-9 ,!.?]*[.!?]$' <<< "$line" && ! grep -Eq ',si' <<< "$line"
+		if grep -Eq '^[A-Z][A-Za-z0-9 ,!.?]*[.!?]$' <<< "$line" && ! grep -Eq ',si' <<< "$line" && grep -Eq "$1" <<< "$line"
 		then
-		contor=`expr $contor + 1`;
+		contor=$(expr "$contor" + 1)
 
 		fi
 	done

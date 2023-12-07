@@ -1,6 +1,8 @@
 
-nume fisier: regularFile2.txt
-dimensiune: 22
+nume fisier: imagine_1.bmp
+inaltime: 467
+lungime: 467
+dimensiune: 219634
 identificatorul utilizatorului: 1000
 timpul ultimei modificari: 07.12.2023
 contorul de legaturi: 1

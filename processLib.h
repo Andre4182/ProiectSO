@@ -30,8 +30,9 @@ struct Pixel {
 };
 #pragma pack(pop) // Restore default structure alignment
 void processFile(char * filePath, char * dirIesire);
-void convert_to_grayscale(char * file, int width, int height);
-void read_bmp_header(char * file_path);
+void convert_to_grayscale(char * file);
+void read_bmp(char * file_path);
 void finishWithError(const char * errorMessage);
+void printRegexMatches(char *c);
 #endif
 

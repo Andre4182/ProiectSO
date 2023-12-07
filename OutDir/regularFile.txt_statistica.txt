@@ -1,8 +1,8 @@
 
 nume fisier: regularFile.txt
-dimensiune: 11
+dimensiune: 37
 identificatorul utilizatorului: 1000
-timpul ultimei modificari: 12.11.2023
+timpul ultimei modificari: 07.12.2023
 contorul de legaturi: 1
 drepturi de acces user: RWX
 drepturi de acces grup: RWX
