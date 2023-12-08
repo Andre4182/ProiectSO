@@ -27,7 +27,7 @@ void showProcessCode() {
   }
 }
 
-void goThroughDirectory(char * dirPath, char * dirIesire) {
+void goThroughDirectory(char * dirPath, char * dirIesire, char *character) {
 
   DIR * dir = opendir(dirPath);
   if (dir == NULL) {
@@ -123,7 +123,7 @@ void goThroughDirectory(char * dirPath, char * dirIesire) {
 								close(pipe2WithParent[0]);//inchide capatul de citire
 								dup2(pipe2WithParent[1],STDOUT_FILENO);//redirecteaza capatul de scriere cu ce se primeste de la iesirea standard unde se scriu nr de match-uri
 								close(pipe2WithParent[1]);//se inchide si capatul de scriere
-								printRegexMatches("v");//to be mod
+								printRegexMatches(character);
            	  	exit(0);
             } else {
             	close(pipeChildren[0]);//inchidem capatul de citire
@@ -156,7 +156,7 @@ int main(int argc, char * argv[]) {
     exit(-1);
   }
 
-  goThroughDirectory(argv[1], argv[2]);
+  goThroughDirectory(argv[1], argv[2],argv[3]);
 
   return 0;
 }
