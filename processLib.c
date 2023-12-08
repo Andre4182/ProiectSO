@@ -15,24 +15,51 @@
 struct BITMAPFILEHEADER file_header;
 struct BITMAPINFOHEADER info_header;
 
+
+void finishWithError(const char * errorMessage) {
+  perror(errorMessage);
+  exit(-1);
+}
+
+
+
+int returnNumberOfLines(char *text){
+
+    char scriptExecute[300];
+    FILE* fp;
+    sprintf(scriptExecute, "./scriptNrOfLines.sh '%s'", text);
+
+    fp = popen(scriptExecute, "r");
+    if (fp == NULL) {
+        finishWithError("Failed to run scriptNrOfLines shell script!");
+    }
+
+    int lines;
+    fscanf(fp, "%d", &lines);
+
+    pclose(fp);
+
+    return lines;
+
+}
+
 void convert_to_grayscale(char * file) {
-printf("----------------%d\n",info_header.bit_count);
+
   int fd = open(file, O_RDWR);
   if (fd == -1) {
-    printf("Error opening file.\n");
-    return;
+    finishWithError("Error opening bmp image file");
   }
 
   lseek(fd, 54, SEEK_CUR);
    struct Pixel pixel;
-if(info_header.bit_count>8){
+if(info_header.bit_count>8){ 
  
   for (int y = 0; y < info_header.height; y++) {
     for (int x = 0; x < info_header.width; x++) {
       int pixel_position = lseek(fd, 0, SEEK_CUR); // Get the current position
       ssize_t bytes = read(fd, & pixel, sizeof(struct Pixel));
       if (bytes == -1) {
-        perror("Bad reading");
+        finishWithError("Bad reading");
       }
       // Convert to grayscale using the provided formula
       uint8_t grayscale = (uint8_t)((0.299 * pixel.red) + (0.587 * pixel.green) + (0.114 * pixel.blue));
@@ -45,8 +72,7 @@ if(info_header.bit_count>8){
       lseek(fd, pixel_position, SEEK_SET);
       bytes = write(fd, & pixel, sizeof(struct Pixel));
       if (bytes == -1) {
-        perror("Bad writting");
-
+        finishWithError("Bad overriding of pixel!");
       }
 
     }
@@ -54,15 +80,15 @@ if(info_header.bit_count>8){
 }else{
 
 	for(int i=0;i<info_header.colors_used;i++){
-	 int pixel_position = lseek(fd, 0, SEEK_CUR); // Get the current position
-      ssize_t bytes = read(fd, & pixel, sizeof(struct Pixel));
-      if (bytes == -1) {
-        perror("Bad reading");
-      }
+	int pixel_position = lseek(fd, 0, SEEK_CUR); // Get the current position
+	ssize_t bytes = read(fd, & pixel, sizeof(struct Pixel));
+      	if (bytes == -1) {
+        	finishWithError("Bad reading");
+      	}
       uint8_t reserved=0;
       bytes = read(fd, &reserved, sizeof(uint8_t));
       if (bytes == -1) {
-        perror("Bad reading");
+        finishWithError("Bad reading");
       }
       // Convert to grayscale using the provided formula
       uint8_t grayscale = (uint8_t)((0.299 * pixel.red) + (0.587 * pixel.green) + (0.114 * pixel.blue));
@@ -75,15 +101,15 @@ if(info_header.bit_count>8){
       lseek(fd, pixel_position, SEEK_SET);
       bytes = write(fd, & pixel, sizeof(struct Pixel));
       if (bytes == -1) {
-        perror("Bad writting");
+        finishWithError("Bad writting");
 
       }
       bytes = write(fd, &reserved, sizeof(uint8_t));
       if (bytes == -1) {
-        perror("Bad writting");
+        finishWithError("Bad writting");
 
       }
-	}
+    }
 
 }
   close(fd);
@@ -92,35 +118,25 @@ if(info_header.bit_count>8){
 void read_bmp(char * file_path) {
   int fd = open(file_path, O_RDWR);
   if (fd == -1) {
-    printf("Error opening file.\n");
-    return;
+    finishWithError("Error opening file.\n");
   }
 
   if (read(fd, & file_header, sizeof(file_header)) != sizeof(file_header)) {
-    printf("Error reading file header.\n");
+    finishWithError("Error reading file header.\n");
     close(fd);
-    return;
   }
-
-  printf("Signature: %c%c\n", (char)(file_header.signature & 0xFF), (char)((file_header.signature >> 8) & 0xFF));
-  printf("File Size: %u bytes\n", file_header.file_size);
-  printf("Data Offset: %u bytes\n", file_header.data_offset);
 
   lseek(fd, sizeof(file_header), SEEK_SET);
 
   if (read(fd, & info_header, sizeof(info_header)) != sizeof(info_header)) {
-    printf("Error reading info header.\n");
+    finishWithError("Error reading info header.\n");
     close(fd);
-    return;
   }
 
   close(fd);
 }
 
-void finishWithError(const char * errorMessage) {
-  perror(errorMessage);
-  exit(-1);
-}
+
 
 void extractLastModificationTime(struct stat * file_stat, char * time) {
   struct tm * timeinfo = localtime( & file_stat -> st_atime);
@@ -157,8 +173,8 @@ void getHeightAndWidth(int fd, int * height, int * width) {
   }
 }
 
-void processFile(char * filePath, char * dirIesire) {
-
+int processFile(char * filePath, char * dirIesire) {
+printf("%s\n",filePath);
   int input = open(filePath, O_RDONLY);
   if (input == -1) {
     finishWithError("Eroare la deschiderea fisierului de intrare!");
@@ -184,35 +200,35 @@ void processFile(char * filePath, char * dirIesire) {
 
     extractAccessRights(link_stat.st_mode, accessRights);
 
-    sprintf(statistica, "\nnume legatura: %s\ndimensiune legatura: %ld\ndimensiune fisier target: %ld\ndrepturi de acces user legatura: %c%c%c\ndrepturi de acces grup legatura: %c%c%c\ndrepturi de acces altii legatura: %c%c%c\n",
+    sprintf(statistica, "nume legatura: %s\ndimensiune legatura: %ld\ndimensiune fisier target: %ld\ndrepturi de acces user legatura: %c%c%c\ndrepturi de acces grup legatura: %c%c%c\ndrepturi de acces altii legatura: %c%c%c",
       fileName, file_stat.st_size, link_stat.st_size, accessRights[0], accessRights[1], accessRights[2], accessRights[3], accessRights[4], accessRights[5], accessRights[6], accessRights[7], accessRights[8]);
   } else if (S_ISREG(file_stat.st_mode)) {
     extractAccessRights(file_stat.st_mode, accessRights);
     if (strstr(fileName, ".bmp")) {
       int height, width;
       getHeightAndWidth(input, & height, & width);
-      sprintf(statistica, "\nnume fisier: %s\ninaltime: %d\nlungime: %d\ndimensiune: %ld\nidentificatorul utilizatorului: %d\ntimpul ultimei modificari: %s\ncontorul de legaturi: %ld\ndrepturi de acces user: %c%c%c\ndrepturi de acces grup: %c%c%c\ndrepturi de acces altii: %c%c%c\n",
+      sprintf(statistica, "nume fisier: %s\ninaltime: %d\nlungime: %d\ndimensiune: %ld\nidentificatorul utilizatorului: %d\ntimpul ultimei modificari: %s\ncontorul de legaturi: %ld\ndrepturi de acces user: %c%c%c\ndrepturi de acces grup: %c%c%c\ndrepturi de acces altii: %c%c%c",
         fileName, height, width, file_stat.st_size, file_stat.st_uid, time, file_stat.st_nlink, accessRights[0], accessRights[1], accessRights[2], accessRights[3], accessRights[4], accessRights[5], accessRights[6], accessRights[7], accessRights[8]);
     } else {
-      sprintf(statistica, "\nnume fisier: %s\ndimensiune: %ld\nidentificatorul utilizatorului: %d\ntimpul ultimei modificari: %s\ncontorul de legaturi: %ld\ndrepturi de acces user: %c%c%c\ndrepturi de acces grup: %c%c%c\ndrepturi de acces altii: %c%c%c\n",
+      sprintf(statistica, "nume fisier: %s\ndimensiune: %ld\nidentificatorul utilizatorului: %d\ntimpul ultimei modificari: %s\ncontorul de legaturi: %ld\ndrepturi de acces user: %c%c%c\ndrepturi de acces grup: %c%c%c\ndrepturi de acces altii: %c%c%c",
         fileName, file_stat.st_size, file_stat.st_uid, time, file_stat.st_nlink, accessRights[0], accessRights[1], accessRights[2], accessRights[3], accessRights[4], accessRights[5], accessRights[6], accessRights[7], accessRights[8]);
     char buff[4096];
     ssize_t bytes = 0;
 
-    while ((bytes = read(input, buff, sizeof(buff))) > 0)
-    {
-        write(STDOUT_FILENO, buff, bytes);
-    }
+    	while ((bytes = read(input, buff, sizeof(buff))) > 0)
+    	{
+        	write(STDOUT_FILENO, buff, bytes);
+    	}
+    	
+
     }
   } else if (S_ISDIR(file_stat.st_mode)) {
     extractAccessRights(file_stat.st_mode, accessRights);
-    sprintf(statistica, "\nnume director: %s\nidentificatorul utilizatorului: %d\ndrepturi de acces user: %c%c%c\ndrepturi de acces grup: %c%c%c\ndrepturi de acces altii: %c%c%c\n",
+    sprintf(statistica, "nume director: %s\nidentificatorul utilizatorului: %d\ndrepturi de acces user: %c%c%c\ndrepturi de acces grup: %c%c%c\ndrepturi de acces altii: %c%c%c",
       fileName, file_stat.st_uid, accessRights[0], accessRights[1], accessRights[2], accessRights[3], accessRights[4], accessRights[5], accessRights[6], accessRights[7], accessRights[8]);
   }
   char outputPath[200];
-  //strcat(dirPath,"/");
-  //strcat(dirPath,fileName);
-  //strcat(dirPath,"_statistica.txt");
+
   snprintf(outputPath, PATH_MAX, "%s/%s_statistica.txt", dirIesire, fileName);
   int output = creat(outputPath, S_IWUSR | S_IRUSR);
   if (output == -1) {
@@ -222,18 +238,20 @@ void processFile(char * filePath, char * dirIesire) {
   if (bytes == -1) {
     finishWithError("Error writing to output file");
   }
-
+   
   close(input);
   int close_output = close(output);
   if (close_output == -1) {
     perror("Eroare la inchidere!");
     exit(-3);
   }
+  return returnNumberOfLines(statistica);
 }
 
 
 void printRegexMatches(char *c){
 
 execlp("bash","bash","./shell.sh", c, (char * )NULL);
-
 }
+
+

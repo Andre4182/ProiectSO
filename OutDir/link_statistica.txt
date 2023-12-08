@@ -1,4 +1,3 @@
-
 nume legatura: link
 dimensiune legatura: 16
 dimensiune fisier target: 22

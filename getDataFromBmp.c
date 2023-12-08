@@ -20,7 +20,7 @@ void showProcessCode() {
   pid_t wpid;
   while ((wpid = wait( & status)) > 0) {
     if (WIFEXITED(status)) {
-      printf("S-a încheiat procesul cu pid-ul %d și codul %d\n la parent %d\n", wpid, WEXITSTATUS(status), getpid());
+      printf("S-a încheiat procesul cu pid-ul %d și codul %d(ce reprezinta nr de linii scrise) la parent %d\n", wpid, WEXITSTATUS(status), getpid());
     } else {
       printf("Procesul cu pid-ul %d a fost încheiat în mod neașteptat\n", wpid);
     }
@@ -37,8 +37,8 @@ void goThroughDirectory(char * dirPath, char * dirIesire, char *character) {
   if (pid < 0) {
     finishWithError("Error while forking!");
   } else if (pid == 0) {
-    processFile(dirPath, dirIesire);
-    exit(0);
+    int nrOfLines=processFile(dirPath, dirIesire);
+    exit(nrOfLines);
   } else {
     showProcessCode();
 
@@ -58,23 +58,21 @@ void goThroughDirectory(char * dirPath, char * dirIesire, char *character) {
             finishWithError("Error while forking!");
           } else if (pid == 0) {
 
-            processFile(filePath, dirIesire);
-            exit(0);
+            int nrOfLines=processFile(filePath, dirIesire);
+            exit(nrOfLines);
           } else {
             showProcessCode();
-
           }
         }
 
         if (currentEntry -> d_type == DT_REG) {
-          if (strstr(filePath, ".bmp")) {
-            
+          if (strstr(filePath, ".bmp")) {            
             pid_t pid = fork();
             if (pid < 0) {
               finishWithError("Error while forking!");
             } else if (pid == 0) {
-              processFile(filePath, dirIesire);
-              exit(0);
+              int nrOfLines=processFile(filePath, dirIesire);
+              exit(nrOfLines);
             } else {
               showProcessCode();
             }
@@ -105,8 +103,8 @@ void goThroughDirectory(char * dirPath, char * dirIesire, char *character) {
 								close(pipeChildren[0]);//se inchide capatul de citire 
 								dup2(pipeChildren[1],STDOUT_FILENO);//redirectam capatul de scriere cu iesirea standard(unde o sa scrie proccesFile)
 								close(pipeChildren[1]);
-								processFile(filePath, dirIesire);
-           	  	exit(0);
+								int nrOfLines=processFile(filePath, dirIesire);
+           	  	exit(nrOfLines);
             } else {
               showProcessCode();
             }
@@ -136,8 +134,9 @@ void goThroughDirectory(char * dirPath, char * dirIesire, char *character) {
             	while((bytes=read(pipe2WithParent[0],buff,sizeof(buff)))>0){
             		 nr=atoi(buff);
             	}
+            	
             	close(pipe2WithParent[0]);//inchidere capat de citire
-            	printf("Au fost identificate in total <%d> propozitii corecte care contin caracterul v\n", nr);//to be mod
+            	printf("Au fost identificate in total <%d> propozitii corecte care contin caracterul %s\n", nr,character);//to be mod
               showProcessCode();
             }
 					}

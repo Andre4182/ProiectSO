@@ -1,4 +1,3 @@
-
 nume director: TestDir2
 identificatorul utilizatorului: 1000
 drepturi de acces user: RWX
