@@ -1,13 +1,6 @@
 #ifndef __PROCESSLIB_H
 #define __PROCESSLIB_H
-#pragma pack(push, 1) // Ensure struct uses 1-byte alignment
-struct BITMAPFILEHEADER {
-    uint16_t signature;
-    uint32_t file_size;
-    uint32_t reserved;
-    uint32_t data_offset;
-};
-
+#pragma pack(push, 1) // 1-byte alignment
 struct BITMAPINFOHEADER {
     uint32_t size;
     int32_t width;
@@ -23,15 +16,14 @@ struct BITMAPINFOHEADER {
 };
 
 
-struct Pixel {
+struct PixelBMP {
     uint8_t blue;
     uint8_t green;
     uint8_t red;
 };
-#pragma pack(pop) // Restore default structure alignment
+#pragma pack(pop) //get back to default structure alignment
 int processFile(char * filePath, char * dirIesire);
 void convert_to_grayscale(char * file);
-void read_bmp(char * file_path);
 void finishWithError(const char * errorMessage);
 void printRegexMatches(char *c);
 #endif

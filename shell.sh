@@ -8,7 +8,6 @@ then
 			if grep -Eq '^[A-Z][A-Za-z0-9 ,!.?]*[.!?]$' <<< "$line" && ! grep -Eq ',si' <<< "$line" && grep -Eq "$1" <<< "$line"
 			then
 				contor=$(expr "$contor" + 1)
-
 			fi
 		done
 		echo $contor

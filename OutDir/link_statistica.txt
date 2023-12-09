@@ -1,6 +1,6 @@
 nume legatura: link
 dimensiune legatura: 16
 dimensiune fisier target: 22
-drepturi de acces user legatura: RW-
-drepturi de acces grup legatura: RW-
-drepturi de acces altii legatura: R--
+drepturi de acces user: RW-
+drepturi de acces grup: RW-
+drepturi de acces altii: R--

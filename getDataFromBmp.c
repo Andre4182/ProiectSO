@@ -1,19 +1,13 @@
 #include<stdio.h>
 #include<stdlib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/wait.h>
-#include <fcntl.h>
 #include <unistd.h>
-#include<aio.h>
-#include <time.h>
 #include <stdint.h>
 #include <string.h>
 #include <dirent.h>
-#include<libgen.h>
 #include "processLib.h"
 
-struct BITMAPINFOHEADER info;
+
 
 void showProcessCode() {
   int status;
@@ -33,7 +27,7 @@ void goThroughDirectory(char * dirPath, char * dirIesire, char *character) {
   if (dir == NULL) {
     finishWithError("Eroare la deschiderea directorului!");
   }
-  pid_t pid = fork();
+  pid_t pid = fork();// a procces for the given directory
   if (pid < 0) {
     finishWithError("Error while forking!");
   } else if (pid == 0) {
@@ -52,12 +46,11 @@ void goThroughDirectory(char * dirPath, char * dirIesire, char *character) {
       if (strcmp(currentEntry -> d_name, ".") != 0 && strcmp(currentEntry -> d_name, "..") != 0) //nu aplica logica pentru legaturile default la directorul curent si directorul parinte
       {
 
-        if (currentEntry -> d_type == DT_REG || currentEntry -> d_type == DT_LNK || currentEntry -> d_type == DT_DIR) {
+        if (currentEntry -> d_type == DT_REG || currentEntry -> d_type == DT_LNK || currentEntry -> d_type == DT_DIR) { // link or directory case
           pid_t pid = fork();
           if (pid < 0) {
             finishWithError("Error while forking!");
           } else if (pid == 0) {
-
             int nrOfLines=processFile(filePath, dirIesire);
             exit(nrOfLines);
           } else {
@@ -66,9 +59,9 @@ void goThroughDirectory(char * dirPath, char * dirIesire, char *character) {
         }
 
         if (currentEntry -> d_type == DT_REG) {
-          if (strstr(filePath, ".bmp")) {            
-            pid_t pid = fork();
-            if (pid < 0) {
+					if (strstr(filePath, ".bmp")) {   // bmp regular file case         
+          	pid_t pid = fork(); // proess for processing file
+          	if (pid < 0) {
               finishWithError("Error while forking!");
             } else if (pid == 0) {
               int nrOfLines=processFile(filePath, dirIesire);
@@ -77,17 +70,19 @@ void goThroughDirectory(char * dirPath, char * dirIesire, char *character) {
               showProcessCode();
             }
             
-            pid = fork();
+            pid = fork();// process for converting photo 
             if (pid < 0) {
               finishWithError("Error while forking!");
             } else if (pid == 0) {
-              read_bmp(filePath);
               convert_to_grayscale(filePath);
               exit(0);
             } else {
               showProcessCode();
             }
-          }else{
+          }
+          
+           else{ // regular file case(non-bmp)
+          
           	int pipeChildren[2];//pipe-ul pt comunicarea intre copii
           	int pipe2WithParent[2]; //pepe-ul pt comunicarea intre copilul 2 si parinte
           	if(pipe(pipeChildren)==-1 || pipe(pipe2WithParent)==-1)
@@ -115,7 +110,7 @@ void goThroughDirectory(char * dirPath, char * dirIesire, char *character) {
             } else if (pid == 0) {
 
 								close(pipeChildren[1]);//se inchide capatul de scriere 
-								dup2(pipeChildren[0],STDIN_FILENO);//redirectam capatul de citire cu intrarea standard
+								dup2(pipeChildren[0],STDIN_FILENO);//redirectam capatul de citire cu intrarea standard(tot ce s-a primit -de la stdout- se pune pe stdin pt functia de regex
 								close(pipeChildren[0]);//inchidere si a capatului de citire
 								
 								close(pipe2WithParent[0]);//inchide capatul de citire
@@ -128,9 +123,10 @@ void goThroughDirectory(char * dirPath, char * dirIesire, char *character) {
             	close(pipeChildren[1]);//inchidem capatul de scriere
             	close(pipe2WithParent[1]);//inchidem capatul de scriere;
             	
-            	char buff[4096];//521*8
+            	char buff[4096];//512*8
             	ssize_t bytes;
             	int nr=0;
+            	// se citeste ce s-a primit pe pipe-ul de citire -de la stdout-
             	while((bytes=read(pipe2WithParent[0],buff,sizeof(buff)))>0){
             		 nr=atoi(buff);
             	}
